@@ -2,6 +2,7 @@ import java.awt.AWTException;
 import java.awt.Robot;
 import java.awt.Toolkit;
 import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -62,6 +63,23 @@ public class Server {
                         break;
                     case ProtocolConstants.CODE_RIGHT_CLICK_UP:
                         mRobot.mouseRelease(InputEvent.BUTTON2_DOWN_MASK);
+                        break;
+                    case ProtocolConstants.CODE_KEYBOARD:
+                        int unicodeChar = inStream.readInt();
+                        int keycode;
+                        if (unicodeChar == 0) {
+                            keycode = KeyEvent.VK_BACK_SPACE;
+                        } else if (unicodeChar == 10) {
+                            keycode = KeyEvent.VK_ENTER;
+                        } else {
+                            keycode = KeyEvent.getExtendedKeyCodeForChar(unicodeChar);
+                        }
+                        try {
+                            mRobot.keyPress(keycode);
+                            mRobot.keyRelease(keycode);
+                        } catch (IllegalArgumentException e) {
+                            System.err.println("Illegal Keycode: " + keycode);
+                        }
                         break;
                     default:
                         mouseX -= inVal;
