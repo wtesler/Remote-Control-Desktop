@@ -84,7 +84,7 @@ public class Server {
                     default:
                         mouseX -= inVal;
                         mouseY -= inStream.readInt();
-                        mRobot.mouseMove(mouseX, mouseY);
+                        moveMouse();
                 }
             }
         } catch (EOFException e) {
@@ -94,9 +94,32 @@ public class Server {
         }
     }
 
+    private void moveMouse() {
+        int x = mouseX;
+        int y = mouseY;
+
+        if (x < 0) {
+            x = 0;
+        }
+
+        if (y < 0) {
+            y = 0;
+        }
+
+        if (x > (int) Toolkit.getDefaultToolkit().getScreenSize().getWidth()) {
+            x = (int) Toolkit.getDefaultToolkit().getScreenSize().getWidth();
+        }
+
+        if (y > (int) Toolkit.getDefaultToolkit().getScreenSize().getHeight()) {
+            y = (int) Toolkit.getDefaultToolkit().getScreenSize().getHeight();
+        }
+
+        mRobot.mouseMove(x, y);
+    }
+
     private void centerMouse() {
         mouseX = (int) Toolkit.getDefaultToolkit().getScreenSize().getWidth() / 2;
         mouseY = (int) Toolkit.getDefaultToolkit().getScreenSize().getHeight() / 2;
-        mRobot.mouseMove(mouseX, mouseY);
+        moveMouse();
     }
 }
