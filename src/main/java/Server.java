@@ -8,13 +8,18 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Server {
 
     private Robot mRobot;
     private ServerSocket mServerSocket;
+    private Socket mClientSocket;
+    Timer mTimer;
 
     private int mouseX, mouseY;
+    private long mTimeUpdated;
 
     public Server() {
         try {
@@ -29,39 +34,44 @@ public class Server {
     public void waitForConnection() {
         try {
             System.out.println("Waiting for connection.");
-            Socket clientSocket = mServerSocket.accept();
+            mClientSocket = mServerSocket.accept();
             System.out.println("Connected to client.");
-            listen(clientSocket);
+            listen();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public int getLocalPort() {
-        return mServerSocket.getLocalPort();
-    }
-
-    private void listen(Socket clientSocket) {
+    private void listen() {
         try {
-            DataInputStream inStream = new DataInputStream(clientSocket.getInputStream());
-
+            DataInputStream inStream = new DataInputStream(mClientSocket.getInputStream());
+            monitorIdleTime();
             int inVal;
             while (true) {
                 inVal = inStream.readInt();
+                mTimeUpdated = System.currentTimeMillis();
                 switch (inVal) {
                     case ProtocolConstants.CODE_CALIBRATE:
                         centerMouse();
                         break;
-                    case ProtocolConstants.CODE_LEFT_CLICK_DOWN:
+                    case ProtocolConstants.CODE_LEFT_DOWN:
                         mRobot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
                         break;
-                    case ProtocolConstants.CODE_LEFT_CLICK_UP:
+                    case ProtocolConstants.CODE_LEFT_CLICK:
+                        mRobot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
                         mRobot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
                         break;
-                    case ProtocolConstants.CODE_RIGHT_CLICK_DOWN:
+                    case ProtocolConstants.CODE_LEFT_UP:
+                        mRobot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+                        break;
+                    case ProtocolConstants.CODE_RIGHT_CLICK:
+                        mRobot.mousePress(InputEvent.BUTTON2_DOWN_MASK);
+                        mRobot.mouseRelease(InputEvent.BUTTON2_DOWN_MASK);
+                        break;
+                    case ProtocolConstants.CODE_RIGHT_DOWN:
                         mRobot.mousePress(InputEvent.BUTTON2_DOWN_MASK);
                         break;
-                    case ProtocolConstants.CODE_RIGHT_CLICK_UP:
+                    case ProtocolConstants.CODE_RIGHT_UP:
                         mRobot.mouseRelease(InputEvent.BUTTON2_DOWN_MASK);
                         break;
                     case ProtocolConstants.CODE_KEYBOARD:
@@ -85,6 +95,7 @@ public class Server {
                         mouseX -= inVal;
                         mouseY -= inStream.readInt();
                         moveMouse();
+                        break;
                 }
             }
         } catch (EOFException e) {
@@ -92,6 +103,8 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        mTimer.cancel();
     }
 
     private void moveMouse() {
@@ -121,5 +134,25 @@ public class Server {
         mouseX = (int) Toolkit.getDefaultToolkit().getScreenSize().getWidth() / 2;
         mouseY = (int) Toolkit.getDefaultToolkit().getScreenSize().getHeight() / 2;
         moveMouse();
+    }
+
+    private void monitorIdleTime() {
+        mTimer = new Timer();
+        TimerTask myTask = new TimerTask() {
+            @Override
+            public void run() {
+                if (System.currentTimeMillis() - mTimeUpdated > 5000) {
+                    if (mClientSocket != null) {
+                        try {
+                            System.err.println("Connection with client idled so is being terminated.");
+                            mClientSocket.shutdownInput();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        };
+        mTimer.schedule(myTask, 5000, 5000);
     }
 }
