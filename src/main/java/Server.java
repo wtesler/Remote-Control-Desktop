@@ -141,16 +141,7 @@ public class Server {
         TimerTask myTask = new TimerTask() {
             @Override
             public void run() {
-                if (System.currentTimeMillis() - mTimeUpdated > 5000) {
-                    if (mClientSocket != null) {
-                        try {
-                            System.err.println("Connection with client idled so is being terminated.");
-                            mClientSocket.shutdownInput();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
+
             }
         };
         mTimer.schedule(myTask, 5000, 5000);
